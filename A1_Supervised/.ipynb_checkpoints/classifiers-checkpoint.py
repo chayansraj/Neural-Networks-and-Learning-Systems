@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import stats
-
+import random
 
 def kNN(X, k, XTrain, LTrain):
     """ KNN
@@ -26,11 +26,17 @@ def kNN(X, k, XTrain, LTrain):
         arr = np.zeros((X.shape[0]))
         for j in range(XTrain.shape[0]):
             arr[j] = np.linalg.norm(X[i]-XTrain[j])
-        if X == XTrain:
-            LPred[i]  = LTrain[stats.mode(random.shuffle(list(np.argsort(arr))[1:k]))]
-        else: 
-            LPred[i]  = LTrain[stats.mode(random.shuffle(list(np.argsort(arr))[:k]))]
-  
+        if X is XTrain:
+            if k == 1:
+                LPred[i] = LTrain[np.argsort(arr)[1]]
+            else:
+                LPred[i] = stats.mode(random.sample(list(LTrain[np.argsort(arr[:len(LTrain)])[1:k]]),k-1))[0]
+        else:
+            if k == 1:
+                LPred[i]  = LTrain[np.argsort(arr)[0]]
+            else: 
+                LPred[i] = stats.mode(random.sample(list(LTrain[np.argsort(arr[:len(LTrain)])[:k]]),k))[0]
+    
     return LPred
 
 
@@ -49,7 +55,7 @@ def runSingleLayer(X, W):
     """
 
     # Add your own code here
-    Y = 0
+    Y = np.dot(X,W)
 
     # Calculate labels
     L = np.argmax(Y, axis=1) + 1
@@ -81,23 +87,23 @@ def trainSingleLayer(XTrain, DTrain, XTest, DTest, W0, numIterations, learningRa
     Wout = W0
 
     # Calculate initial error
-    YTrain, _ = runSingleLayer(XTrain, Wout)
-    YTest, _  = runSingleLayer(XTest , Wout)
+    YTrain, LTrain = runSingleLayer(XTrain, Wout)
+    YTest, LTest  = runSingleLayer(XTest , Wout)
     ErrTrain[0] = ((YTrain - DTrain)**2).sum() / NTrain
     ErrTest[0]  = ((YTest  - DTest )**2).sum() / NTest
 
     for n in range(numIterations):
         # Add your own code here
-        grad_w = 0
+        grad_w =  (np.dot(2*((YTrain - DTrain)).transpose(),XTrain)/NTrain).transpose()
 
         # Take a learning step
         Wout = Wout - learningRate * grad_w
 
         # Evaluate errors
-        YTrain, _ = runSingleLayer(XTrain, Wout)
-        YTest, _  = runSingleLayer(XTest , Wout)
-        ErrTrain[n+1] = ((YTrain - DTrain) ** 2).sum() / NTrain
-        ErrTest[n+1]  = ((YTest  - DTest ) ** 2).sum() / NTest
+        YTrain, LTrain = runSingleLayer(XTrain, Wout)
+        YTest, LTest  = runSingleLayer(XTest , Wout)
+        ErrTrain[n+1] = ((YTrain - DTrain)**2).sum() / NTrain
+        ErrTest[n+1]  = ((YTest  - DTest )**2).sum() / NTest
 
     return Wout, ErrTrain, ErrTest
 
@@ -118,9 +124,9 @@ def runMultiLayer(X, W, V):
     """
 
     # Add your own code here
-    S = 0  # Calculate the weighted sum of input signals (hidden neuron)
-    H = 0  # Calculate the activation of the hidden neurons (use hyperbolic tangent)
-    Y = 0  # Calculate the weighted sum of the hidden neurons
+    S = np.dot(X,W)  # Calculate the weighted sum of input signals (hidden neuron)
+    H = np.tanh(S)  # Calculate the activation of the hidden neurons (use hyperbolic tangent)
+    Y = np.dot(H,V)  # Calculate the weighted sum of the hidden neurons
 
     # Calculate labels
     L = Y.argmax(axis=1) + 1
@@ -158,8 +164,8 @@ def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learnin
 
     # Calculate initial error
     # YTrain = runMultiLayer(XTrain, W0, V0)
-    YTrain, _, HTrain = runMultiLayer(XTrain, Wout, Vout)
-    YTest, _, _  = runMultiLayer(XTest , W0, V0)
+    YTrain, LTrain, HTrain = runMultiLayer(XTrain, Wout, Vout)
+    YTest, LTest, HTest  = runMultiLayer(XTest , W0, V0)
     ErrTrain[0] = ((YTrain - DTrain)**2).sum() / (NTrain * NClasses)
     ErrTest[0]  = ((YTest  - DTest )**2).sum() / (NTrain * NClasses)
 
@@ -169,8 +175,8 @@ def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learnin
             print(f'n : {n:d}')
 
         # Add your own code here
-        grad_v = 0 # Gradient for the output layer
-        grad_w = 0 # And the input layer
+        grad_v = 2*np.dot(HTrain.transpose(),(YTrain - DTrain))      # Gradient for the output layer
+        grad_w = 2*np.dot( np.dot( ((YTrain - DTrain)* tanhprim(HTrain)) ,  )) # And the input layer
 
         # Take a learning step
         Vout = Vout - learningRate * grad_v
@@ -178,8 +184,8 @@ def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learnin
 
         # Evaluate errors
     #     YTrain = runMultiLayer(XTrain, Wout, Vout);
-        YTrain, _, HTrain = runMultiLayer(XTrain, Wout, Vout)
-        YTest, _, _  = runMultiLayer(XTest , Wout, Vout)
+        YTrain, LTrain, HTrain = runMultiLayer(XTrain, Wout, Vout)
+        YTest, LTest, HTest  = runMultiLayer(XTest , Wout, Vout)
         ErrTrain[1+n] = ((YTrain - DTrain)**2).sum() / (NTrain * NClasses)
         ErrTest[1+n]  = ((YTest  - DTest )**2).sum() / (NTrain * NClasses)
 

@@ -7,6 +7,9 @@ from scipy import io as sio
 from classifiers import kNN, runSingleLayer, runMultiLayer
 
 
+
+
+
 def calcConfusionMatrix(LPred, LTrue):
     """ CALCCONFUSIONMATRIX
     Returns the confusion matrix of the predicted labels
@@ -17,20 +20,20 @@ def calcConfusionMatrix(LPred, LTrue):
 
     # Add your own code here
     cM = np.zeros((NClasses, NClasses))
-    Tpos1 = 0
-    TNeg2 = 0
-    Fneg2 = 0
-    Fpos1 = 0
-    for i,j in list(zip(LTrue,LPred)):
-        if (i==1) & (i==j):
-            Tpos1 = Tpos1 + 1
-        if (i==2) & (i==j):
-            TNeg2 = TNeg2 + 1
-        if (i==1) & (j==2):
-            Fneg2 = Fneg2 + 1
-        if (i==2) & (j==1):
-            Fpos1 = Fpos1 + 1
-    cM = np.array([[Tpos1,Fneg2],[Fpos1,TNeg2]])
+    
+    """
+    Source: Scikit-learn 
+    
+    The confusion_matrix function evaluates classification accuracy by computing the confusion matrix with each row corresponding to the true class (Wikipedia and other references may use different convention for axes).
+
+    By definition, entry (i,j)  in a confusion matrix is the number of observations actually in group i, but predicted to be in group j.
+    """
+    for i,j in zip(LTrue, LPred):
+        if i == j:
+            cM[i-1][int(j)-1] +=1
+        else:
+            cM[i-1][int(j)-1] += 1
+    
     return cM
 
 
