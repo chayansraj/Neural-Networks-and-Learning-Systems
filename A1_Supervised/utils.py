@@ -11,36 +11,26 @@ def calcConfusionMatrix(LPred, LTrue):
     """ CALCCONFUSIONMATRIX
     Returns the confusion matrix of the predicted labels
     """
-
+    
     classes = np.unique(LTrue)
     NClasses = classes.shape[0]
-
-    # Add your own code here
     cM = np.zeros((NClasses, NClasses))
-    Tpos1 = 0
-    TNeg2 = 0
-    Fneg2 = 0
-    Fpos1 = 0
-    for i,j in list(zip(LTrue,LPred)):
-        if (i==1) & (i==j):
-            Tpos1 = Tpos1 + 1
-        if (i==2) & (i==j):
-            TNeg2 = TNeg2 + 1
-        if (i==1) & (j==2):
-            Fneg2 = Fneg2 + 1
-        if (i==2) & (j==1):
-            Fpos1 = Fpos1 + 1
-    cM = np.array([[Tpos1,Fneg2],[Fpos1,TNeg2]])
+    
+    for LTrue, LPred in zip(LTrue, LPred):
+        if LTrue == LPred: # If the True labels is the correct label:
+            cM[LTrue-1][LTrue-1] += 1 # We increment by one in the diagonal corresponding to that class-1 (since class typically starts from 1)
+        else:
+            cM[int(LPred)-1][int(LTrue)-1] += 1 # Else
+        
     return cM
 
 
 def calcAccuracy(cM):
     """ CALCACCURACY
-    Takes a confusion matrix amd calculates the accuracy
+    Takes a confusion matrix and calculates the accuracy as the sum of the elements in the diagonal divided by the total number of predictions
     """
 
-    # Add your own code here
-    acc = cM.diagonal().sum()/cM.sum() * 100
+    acc = sum(np.diag(cM)) / sum(sum(cM))
 
     return acc
 
