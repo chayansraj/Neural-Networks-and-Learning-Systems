@@ -223,7 +223,7 @@ def runMultiLayer(X, W, V):
     return Y, L, H
 
 
-def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learningRate):
+def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learningRate, optimizer = "GD", momentum = 0):
     """ TRAINMULTILAYER
     Trains the multi-layer network (Learning)
     
@@ -234,6 +234,7 @@ def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learnin
             W0 - Initial weights of the hidden neurons (matrix)
             numIterations - Number of learning steps (scalar)
             learningRate  - The learning rate (scalar)
+            optimizer - Gradient Descent (GD) or Momentum (M)
 
     Output:
             Wout - Weights after training (matrix)
@@ -241,6 +242,14 @@ def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learnin
             ErrTrain - The training error for each iteration (vector)
             ErrTest  - The test error for each iteration (vector)
     """
+    
+    list_optimizers = ["GD", "M"]
+    
+    if not optimizer in list_optimizers:
+        raise ValueError(f"Not a valid optimizer: select {list_optimizers}")
+        
+    if momentum > 1 or momentum < 0:
+        raise ValueError("momentum only valid for values in interval [0,1]")
 
     # Initialize variables
     ErrTrain = np.zeros(numIterations+1)
@@ -257,6 +266,9 @@ def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learnin
     YTest, LTest, HTest  = runMultiLayer(XTest , W0, V0)
     ErrTrain[0] = ((YTrain - DTrain)**2).sum() / (NTrain * NClasses)
     ErrTest[0]  = ((YTest  - DTest )**2).sum() / (NTest * NClasses)
+    
+    gradient_change_Vout = 0
+    gradient_change_Wout = 0
 
     for n in range(numIterations):
 
@@ -266,10 +278,21 @@ def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learnin
         # Add your own code here
         grad_v =  2/NTrain * np.matmul(HTrain.transpose(), YTrain-DTrain)
         grad_w = 2/NTrain * np.matmul(XTrain.transpose(), (np.multiply(np.matmul(YTrain-DTrain, Vout.transpose()), (1-HTrain**2))))
-
-        # Take a learning step
-        Vout = Vout - learningRate * grad_v
-        Wout = Wout - learningRate * grad_w
+        
+        if optimizer == "GD":
+            # Take a learning step
+            Vout = Vout - learningRate * grad_v
+            Wout = Wout - learningRate * grad_w
+        elif optimizer == "M":
+            gradient_change_Vout_new = learningRate * grad_v + momentum * gradient_change_Vout
+            gradient_change_Wout_new = learningRate * grad_w + momentum * gradient_change_Wout
+            # Take a learning step
+            Vout = Vout - gradient_change_Vout_new
+            Wout = Wout - gradient_change_Wout_new
+            # Update gradient change
+            gradient_change_Vout = gradient_change_Vout_new
+            gradient_change_Wout_new = gradient_change_Wout
+            
 
         # Evaluate errors
     #     YTrain = runMultiLayer(XTrain, Wout, Vout);
