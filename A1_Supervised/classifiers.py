@@ -1,6 +1,5 @@
 import numpy as np
 from scipy import stats
-#from utils import tanhprim
 
 def solve_distance_tie(curr_distance, k):
     """Function to solve ties in distance for kNN implementation"""
@@ -13,7 +12,7 @@ def solve_distance_tie(curr_distance, k):
         else:
             found_n_ties = True
     # Increase the k by number of points involved in the tie
-    print(f"Tie in distance: k will increase from {k} to {i}")
+    #print(f"Tie in distance: k will increase from {k} to {i}")
     k = i
     return k
 
@@ -33,18 +32,16 @@ def majority_vote(curr_LTrain, k, Nclasses, classes):
     
     if len(all_maxes) > 1: # If there is not only one max
         if not k == len(curr_LTrain):
-            print(f"Tie in majority vote: k will increase from {k} to {k+1}")
+            #print(f"Tie in majority vote: k will increase from {k} to {k+1}")
             label = majority_vote(curr_LTrain, k+1, Nclasses, classes) # Increment k by one and try again
-        else: # If k is larger than number of trainig points we randomly sample a label
-            print("Majority vote tie was broken randomly")
+        else: # If k is larger than number of trainig points we randomly select a label
+            #print("Majority vote tie was broken randomly")
             label = np.random.choice(classes)
         return label
     else:
-        label = maximum_index + 1
+        label= nearest_label[maximum_index]
         return label
 
-    
-    
 
 def kNN_CV(XTrain, LTrain, folds, hyperparam):
     """Function to perform k-fold crossvalidation for the number of neighbors in kNN"""
@@ -269,7 +266,6 @@ def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learnin
         # Add your own code here
         grad_v =  2/NTrain * np.matmul(HTrain.transpose(), YTrain-DTrain)
         grad_w = 2/NTrain * np.matmul(XTrain.transpose(), (np.multiply(np.matmul(YTrain-DTrain, Vout.transpose()), (1-HTrain**2))))
-        # 2 * XTrain(((XTrain%*%Wout - DTrain)%*%Vout.transpose()) (tanhprim(HTrain)))
 
         # Take a learning step
         Vout = Vout - learningRate * grad_v
