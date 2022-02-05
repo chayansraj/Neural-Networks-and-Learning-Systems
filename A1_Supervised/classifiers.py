@@ -243,7 +243,7 @@ def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learnin
             ErrTest  - The test error for each iteration (vector)
     """
     
-    list_optimizers = ["GD", "M"]
+    list_optimizers = ["GD", "M", "SGD"]
     
     if not optimizer in list_optimizers:
         raise ValueError(f"Not a valid optimizer: select {list_optimizers}")
@@ -274,24 +274,36 @@ def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learnin
 
         if not n % 1000:
             print(f'n : {n:d}')
-            
-        # Add your own code here
-        grad_v =  2/NTrain * np.matmul(HTrain.transpose(), YTrain-DTrain)
-        grad_w = 2/NTrain * np.matmul(XTrain.transpose(), (np.multiply(np.matmul(YTrain-DTrain, Vout.transpose()), (1-HTrain**2))))
         
-        if optimizer == "GD":
-            # Take a learning step
-            Vout = Vout - learningRate * grad_v
-            Wout = Wout - learningRate * grad_w
-        elif optimizer == "M":
-            gradient_change_Vout_new = learningRate * grad_v + momentum * gradient_change_Vout
-            gradient_change_Wout_new = learningRate * grad_w + momentum * gradient_change_Wout
-            # Take a learning step
-            Vout = Vout - gradient_change_Vout_new
-            Wout = Wout - gradient_change_Wout_new
-            # Update gradient change
-            gradient_change_Vout = gradient_change_Vout_new
-            gradient_change_Wout_new = gradient_change_Wout
+        if optimizer == "GD" or optimizer == "M":
+            # Add your own code here
+            grad_v =  2/NTrain * np.matmul(HTrain.transpose(), YTrain-DTrain)
+            grad_w = 2/NTrain * np.matmul(XTrain.transpose(), (np.multiply(np.matmul(YTrain-DTrain, Vout.transpose()), (1-HTrain**2))))
+            if optimizer == "GD":
+                # Take a learning step
+                Vout = Vout - learningRate * grad_v
+                Wout = Wout - learningRate * grad_w
+            elif optimizer == "M":
+                gradient_change_Vout_new = learningRate * grad_v + momentum * gradient_change_Vout
+                gradient_change_Wout_new = learningRate * grad_w + momentum * gradient_change_Wout
+                # Take a learning step
+                Vout = Vout - gradient_change_Vout_new
+                Wout = Wout - gradient_change_Wout_new
+                # Update gradient change
+                gradient_change_Vout = gradient_change_Vout_new
+                gradient_change_Wout_new = gradient_change_Wout
+        elif optimizer = "SGD":
+            # Shuffle the data
+            ind = np.random.permutation(range(len(YTrain)))
+            XTrain_shuff = XTrain[ind]
+            DTrain_shuff = DTrain[ind]
+            LTrain_shuff = LTrain[ind]
+            for observation in len(XTrain_shuff):
+                
+                
+            
+            
+            
             
 
         # Evaluate errors
