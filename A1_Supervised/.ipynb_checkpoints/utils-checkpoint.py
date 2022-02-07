@@ -7,43 +7,33 @@ from scipy import io as sio
 from classifiers import kNN, runSingleLayer, runMultiLayer
 
 
-
-
-
 def calcConfusionMatrix(LPred, LTrue):
     """ CALCCONFUSIONMATRIX
     Returns the confusion matrix of the predicted labels
     """
-
+    
+    #### Currently there is an issue for the two labels case: it works for 3 and 10 labels.
+    ## 
+    
     classes = np.unique(LTrue)
     NClasses = classes.shape[0]
-
-    # Add your own code here
     cM = np.zeros((NClasses, NClasses))
     
-    """
-    Source: Scikit-learn 
-    
-    The confusion_matrix function evaluates classification accuracy by computing the confusion matrix with each row corresponding to the true class (Wikipedia and other references may use different convention for axes).
-
-    By definition, entry (i,j)  in a confusion matrix is the number of observations actually in group i, but predicted to be in group j.
-    """
-    for i,j in zip(LTrue, LPred):
-        if i == j:
-            cM[i-1][int(j)-1] +=1
+    for LTrue, LPred in zip(LTrue, LPred):
+        if LTrue == LPred: # If the True labels is the correct label:
+            cM[LTrue-1][LTrue-1] += 1 # We increment by one in the diagonal corresponding to that class-1 (since class typically starts from 1)
         else:
-            cM[i-1][int(j)-1] += 1
-    
+            cM[int(LPred)-1][int(LTrue)-1] += 1 # Else
+        
     return cM
 
 
 def calcAccuracy(cM):
     """ CALCACCURACY
-    Takes a confusion matrix amd calculates the accuracy
+    Takes a confusion matrix and calculates the accuracy as the sum of the elements in the diagonal divided by the total number of predictions
     """
 
-    # Add your own code here
-    acc = cM.diagonal().sum()/cM.sum() * 100
+    acc = sum(np.diag(cM)) / sum(sum(cM))
 
     return acc
 
