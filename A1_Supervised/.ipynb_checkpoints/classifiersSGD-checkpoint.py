@@ -1,10 +1,9 @@
 import numpy as np
 from scipy import stats
-#from utils import tanhprim
 
 def solve_distance_tie(curr_distance, k):
     """Function to solve ties in distance for kNN implementation"""
-    #n_ties = 1
+    
     found_n_ties = False
     i = k+2 # We know that k+1 is a tie so start from k+2
     while(found_n_ties == False):
@@ -13,38 +12,36 @@ def solve_distance_tie(curr_distance, k):
         else:
             found_n_ties = True
     # Increase the k by number of points involved in the tie
-    k = k + i
+    #print(f"Tie in distance: k will increase from {k} to {i}")
+    k = i
     return k
 
 def majority_vote(curr_LTrain, k, Nclasses, classes):
     """Function to find the mode (majority vote) and resolve the issue when there are equally as many classes for kNN implementation"""
     nearest_label = curr_LTrain[0:k] # Get the nearest labels
-    lst_Nclass = [0] * Nclasses #List of zeroes with length same as number of classes
     
-    for i in range(0,len(nearest_label)): # Count the number of each class
-        found_label = False
-        j = 0
-        while found_label == False:
-            if nearest_label[i] == classes[j] :
-                lst_Nclass[j] += 1
-                found_label = True
-            j += 1
+    nearest_label, lst_Nclass = unique, counts = np.unique(nearest_label, return_counts= True)
     
-    maximum = max(lst_Nclass) # Find the maxium number for each class (mode)
+    if len(nearest_label) == 1: # If we only find one label in the nearest neibours, return directly
+        return nearest_label
+    
+    maximum = np.max(lst_Nclass) # Find the maxium number for each class (mode)
     maximum_index = np.argmax(lst_Nclass) # Index of mode
     
     all_maxes = [i for i in lst_Nclass if i == maximum] # See if other classes have the same value
     
     if len(all_maxes) > 1: # If there is not only one max
         if not k == len(curr_LTrain):
+            #print(f"Tie in majority vote: k will increase from {k} to {k+1}")
             label = majority_vote(curr_LTrain, k+1, Nclasses, classes) # Increment k by one and try again
-        else: # If k is larger than number of trainig points we randomly sample a label
+        else: # If k is larger than number of trainig points we randomly select a label
+            #print("Majority vote tie was broken randomly")
             label = np.random.choice(classes)
         return label
     else:
-        label = maximum_index + 1
+        label= nearest_label[maximum_index]
         return label
-    
+
 
 def kNN_CV(XTrain, LTrain, folds, hyperparam):
     """Function to perform k-fold crossvalidation for the number of neighbors in kNN"""
@@ -95,7 +92,7 @@ def kNN(X, k, XTrain, LTrain):
     classes = np.unique(LTrain) # The classes
     NClasses = classes.shape[0] # The number of classes
     classes = classes.tolist() # Make the classes a list object
-    
+    k_input = k
     
     LPred = np.zeros((X.shape[0])) # An array of zeros; to store predicted labels
 
@@ -117,13 +114,13 @@ def kNN(X, k, XTrain, LTrain):
                 k = solve_distance_tie(curr_distance, k)
             else:
                 k = len(XTrain)
-        print(f"CurrDistance {i}: ")
-        print(curr_distance)
         # Perform the majority vote
         if not k == len(XTrain):
             LPred[i] = majority_vote(curr_LTrain, k, NClasses,classes)
         else: # If k is > number of data points, randomly choose one of the labels (unlikely event)
             LPred[i] = np.random.choice(classes)
+            
+        k = k_input
 
     return LPred
 
@@ -151,7 +148,7 @@ def runSingleLayer(X, W):
     return Y, L
 
 
-def trainSingleLayer(XTrain, DTrain, XTest, DTest, W0, numIterations, learningRate):
+def trainSingleLayer(XTrain, DTrain, XTest, DTest, W0, numIterations, learningRate, batchsize):
     """ TRAINSINGLELAYER
     Trains the single-layer network (Learning)
     
@@ -181,19 +178,31 @@ def trainSingleLayer(XTrain, DTrain, XTest, DTest, W0, numIterations, learningRa
     ErrTest[0]  = ((YTest  - DTest )**2).sum() / NTest
 
     for n in range(numIterations):
-        # Add your own code here
-        grad_w = 2/NTrain * np.matmul(XTrain.transpose(), (YTrain-DTrain))
         
-        #print(f"Iteration {n}")
+        estm = YTrain - DTrain
+        full_mat = np.hstack((XTrain,estm))
+        np.random.shuffle(full_mat)
+        
+        # Implementation of Stochastic Gradient Descent
+        for batch_start in (0,XTrain.shape[0],batchsize):
+            
+            batch_stop = batch_start + batchsize
+                  
+            
+            # Add your own code here
+            grad_w = 2/batchsize * np.matmul(full_mat[batch_start:batch_stop, :XTrain.shape[1]].transpose(),(full_mat[batch_start:batch_stop, -estm.shape[1]:]))
+        
+            #print(f"Iteration {n}")
 
-        # Take a learning step
-        Wout = Wout - learningRate * grad_w
+            # Take a learning step
+            Wout = Wout - learningRate * grad_w
 
-        # Evaluate errors
-        YTrain, LTrain = runSingleLayer(XTrain, Wout)
-        YTest, LTrain  = runSingleLayer(XTest , Wout)
+            # Evaluate errors
+            YTrain, LTrain = runSingleLayer(XTrain, Wout)
+            YTest, LTrain  = runSingleLayer(XTest , Wout)
         ErrTrain[n+1] = ((YTrain - DTrain) ** 2).sum() / NTrain
         ErrTest[n+1]  = ((YTest  - DTest ) ** 2).sum() / NTest
+    print(f'{n+1} epoch completed')
 
     return Wout, ErrTrain, ErrTest
 
@@ -215,8 +224,8 @@ def runMultiLayer(X, W, V):
     
 
     # Add your own code here
-    S = np.matmul(X,W) # Calculate the weighted sum of input signals (hidden neuron)
-    H = np.tanh(S)  # Calculate the activation of the hidden neurons (use hyperbolic tangent)
+    S = np.matmul(X,W)  # Calculate the weighted sum of input signals (hidden neuron)
+    H = np.tanh(S)      # Calculate the activation of the hidden neurons (use hyperbolic tangent)
     Y = np.matmul(H,V)  # Calculate the weighted sum of the hidden neurons
 
     # Calculate labels
@@ -226,7 +235,7 @@ def runMultiLayer(X, W, V):
     return Y, L, H
 
 
-def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learningRate):
+def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learningRate, batchsize):
     """ TRAINMULTILAYER
     Trains the multi-layer network (Learning)
     
@@ -262,24 +271,34 @@ def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learnin
     ErrTest[0]  = ((YTest  - DTest )**2).sum() / (NTest * NClasses)
 
     for n in range(numIterations):
-
+        
         if not n % 1000:
-            print(f'n : {n:d}')
+                print(f'n : {n:d}')
+        
+        estm = YTrain - DTrain
+        full_matrix = np.hstack((XTrain, HTrain, estm))
+        np.random.shuffle(full_matrix)
+        
+        for start in (0,XTrain.shape[0],batchsize):
             
-        # Add your own code here
-        grad_v =  2/NTrain * np.matmul(HTrain.transpose(), YTrain-DTrain)
-        grad_w = 2/NTrain * np.matmul(XTrain.transpose(), (np.multiply(np.matmul(YTrain-DTrain, Vout.transpose()), (1-HTrain**2))))
-        # 2 * XTrain(((XTrain%*%Wout - DTrain)%*%Vout.transpose()) (tanhprim(HTrain)))
+            stop = start + batchsize
+            
+            
 
-        # Take a learning step
-        Vout = Vout - learningRate * grad_v
-        Wout = Wout - learningRate * grad_w
+            # Add your own code here
+            grad_v =  2/batchsize * np.matmul(full_matrix[start:stop, XTrain.shape[1]: XTrain.shape[1] + Wout.shape[1]].transpose(), full_matrix[start:stop,-estm.shape[1]:])
+            
+            grad_w = 2/batchsize * np.matmul(full_matrix[start:stop, :XTrain.shape[1]].transpose(), (np.multiply(np.matmul(full_matrix[start:stop,-estm.shape[1]:], Vout.transpose()), (1-full_matrix[start:stop,XTrain.shape[1]:XTrain.shape[1] + Wout.shape[1]]**2))))
 
-        # Evaluate errors
-    #     YTrain = runMultiLayer(XTrain, Wout, Vout);
-        YTrain, LTrain, HTrain = runMultiLayer(XTrain, Wout, Vout)
-        YTest, LTest , HTest  = runMultiLayer(XTest , Wout, Vout)
-        ErrTrain[1+n] = ((YTrain - DTrain)**2).sum() / (NTrain * NClasses)
-        ErrTest[1+n]  = ((YTest  - DTest )**2).sum() / (NTest * NClasses)
+            # Take a learning step
+            Vout = Vout - learningRate * grad_v
+            Wout = Wout - learningRate * grad_w
+
+            # Evaluate errors
+        #     YTrain = runMultiLayer(XTrain, Wout, Vout);
+            YTrain, LTrain, HTrain = runMultiLayer(XTrain, Wout, Vout)
+            YTest, LTest , HTest  = runMultiLayer(XTest , Wout, Vout)
+            ErrTrain[1+n] = ((YTrain - DTrain)**2).sum() / (NTrain * NClasses)
+            ErrTest[1+n]  = ((YTest  - DTest )**2).sum() / (NTest * NClasses)
 
     return Wout, Vout, ErrTrain, ErrTest

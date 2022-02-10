@@ -224,8 +224,8 @@ def runMultiLayer(X, W, V):
     
 
     # Add your own code here
-    S = np.matmul(X,W) # Calculate the weighted sum of input signals (hidden neuron)
-    H = np.tanh(S)  # Calculate the activation of the hidden neurons (use hyperbolic tangent)
+    S = np.matmul(X,W)  # Calculate the weighted sum of input signals (hidden neuron)
+    H = np.tanh(S)      # Calculate the activation of the hidden neurons (use hyperbolic tangent)
     Y = np.matmul(H,V)  # Calculate the weighted sum of the hidden neurons
 
     # Calculate labels
@@ -235,7 +235,7 @@ def runMultiLayer(X, W, V):
     return Y, L, H
 
 
-def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learningRate):
+def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learningRate, batchsize):
     """ TRAINMULTILAYER
     Trains the multi-layer network (Learning)
     
@@ -271,23 +271,32 @@ def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learnin
     ErrTest[0]  = ((YTest  - DTest )**2).sum() / (NTest * NClasses)
 
     for n in range(numIterations):
-
+        
         if not n % 1000:
-            print(f'n : {n:d}')
+                print(f'n : {n:d}')
+        
+        estm = YTrain - DTrain
+        full_matrix = np.hstack((XTrain, HTrain, estm))
+        np.random.shuffle(full_matrix)
+        
+        for start in (0,XTrain.shape[0],batchsize):
             
-        # Add your own code here
-        grad_v =  2/NTrain * np.matmul(HTrain.transpose(), YTrain-DTrain)
-        grad_w = 2/NTrain * np.matmul(XTrain.transpose(), (np.multiply(np.matmul(YTrain-DTrain, Vout.transpose()), (1-HTrain**2))))
+            stop = start + batchsize
+            
+            # Add your own code here
+            grad_v =  2/batchsize * np.matmul(full_matrix[start:stop, XTrain.shape[1]: XTrain.shape[1] + Wout.shape[1]].transpose(), full_matrix[start:stop,-estm.shape[1]:])
+            
+            grad_w = 2/batchsize * np.matmul(full_matrix[start:stop, :XTrain.shape[1]].transpose(), (np.multiply(np.matmul(full_matrix[start:stop,-estm.shape[1]:], Vout.transpose()), (1-full_matrix[start:stop,XTrain.shape[1]:XTrain.shape[1] + Wout.shape[1]]**2))))
 
-        # Take a learning step
-        Vout = Vout - learningRate * grad_v
-        Wout = Wout - learningRate * grad_w
+            # Take a learning step
+            Vout = Vout - learningRate * grad_v
+            Wout = Wout - learningRate * grad_w
 
-        # Evaluate errors
-    #     YTrain = runMultiLayer(XTrain, Wout, Vout);
-        YTrain, LTrain, HTrain = runMultiLayer(XTrain, Wout, Vout)
-        YTest, LTest , HTest  = runMultiLayer(XTest , Wout, Vout)
-        ErrTrain[1+n] = ((YTrain - DTrain)**2).sum() / (NTrain * NClasses)
-        ErrTest[1+n]  = ((YTest  - DTest )**2).sum() / (NTest * NClasses)
+            # Evaluate errors
+        #     YTrain = runMultiLayer(XTrain, Wout, Vout);
+            YTrain, LTrain, HTrain = runMultiLayer(XTrain, Wout, Vout)
+            YTest, LTest , HTest  = runMultiLayer(XTest , Wout, Vout)
+            ErrTrain[1+n] = ((YTrain - DTrain)**2).sum() / (NTrain * NClasses)
+            ErrTest[1+n]  = ((YTest  - DTest )**2).sum() / (NTest * NClasses)
 
     return Wout, Vout, ErrTrain, ErrTest
