@@ -1,3 +1,4 @@
+import numpy as np
 
 def WeakClassifier(T, P, X):
     """ WEAKCLASSIFIER
@@ -11,8 +12,14 @@ def WeakClassifier(T, P, X):
     This is for your own benefit, since a loop will be too slow to use
     with a reasonable amount of Haar features and training images.
     """
-
-    C = 0
+    C = np.ones(len(X))
+    
+    if P == 1:
+        C[X<T] = -1
+    
+    else:
+        C[X>T] = -1
+    
     
     return C
 
@@ -29,7 +36,7 @@ def WeakClassifierError(C, D, Y):
     This is for your own benefit, since a loop will be too slow to use
     with a reasonable amount of Haar features and training images.
     """
-
-    E = 0
-
+    E = sum(D * (C != Y + 0))
+    
+   
     return E
