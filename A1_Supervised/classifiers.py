@@ -223,7 +223,7 @@ def runMultiLayer(X, W, V):
     return Y, L, H
 
 
-def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learningRate):
+def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learningRate, optimizer = "GD", momentum = 0, batchsize = None):
     """ TRAINMULTILAYER
     Trains the multi-layer network (Learning)
     
@@ -242,6 +242,17 @@ def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learnin
             ErrTest  - The test error for each iteration (vector)
     """
 
+    list_optimizers = ["GD", "MGD", "SGD"]
+    
+    if not optimizer in list_optimizers:
+        raise ValueError(f"Not a valid optimizer: select {list_optimizers}.")
+        
+    if momentum > 1 or momentum < 0:
+        raise ValueError("Momentum only valid for values in interval [0,1].")
+        
+    if optimizer == "SGD" and batchsize < 1:
+        raise ValueError("Batchsize cannot be less than 1.")
+    
     # Initialize variables
     ErrTrain = np.zeros(numIterations+1)
     ErrTest  = np.zeros(numIterations+1)
@@ -263,19 +274,50 @@ def trainMultiLayer(XTrain, DTrain, XTest, DTest, W0, V0, numIterations, learnin
         if not n % 1000:
             print(f'n : {n:d}')
             
-        # Add your own code here
-        grad_v =  2/NTrain * np.matmul(HTrain.transpose(), YTrain-DTrain)
-        grad_w = 2/NTrain * np.matmul(XTrain.transpose(), (np.multiply(np.matmul(YTrain-DTrain, Vout.transpose()), (1-HTrain**2))))
+        if optimizer == "GD" or optimizer == "MGD":
+            # Add your own code here
+            grad_v =  2/NTrain * np.matmul(HTrain.transpose(), YTrain-DTrain)
+            grad_w = 2/NTrain * np.matmul(XTrain.transpose(), (np.multiply(np.matmul(YTrain-DTrain, Vout.transpose()), (1-HTrain**2))))
+            
+            if optimizer == "GD":
+                # Take a learning step
+                Vout = Vout - learningRate * grad_v
+                Wout = Wout - learningRate * grad_w
+            elif optimizer == "MGD":
+                Vout = Vout - learningRate * grad_v
+                Vout = momentum * Vout
+                Wout = Wout - learningRate * grad_w
+                
+                    # Evaluate errors
+        #     YTrain = runMultiLayer(XTrain, Wout, Vout);
+            YTrain, LTrain, HTrain = runMultiLayer(XTrain, Wout, Vout)
+            YTest, LTest , HTest  = runMultiLayer(XTest , Wout, Vout)
+            ErrTrain[1+n] = ((YTrain - DTrain)**2).sum() / (NTrain * NClasses)
+            ErrTest[1+n]  = ((YTest  - DTest )**2).sum() / (NTest * NClasses)
+                
+        elif optimizer == "SGD":
+            estm = YTrain - DTrain
+            full_matrix = np.hstack((XTrain, HTrain, estm))
+            np.random.shuffle(full_matrix)
+            
+            for start in (0,XTrain.shape[0],batchsize):
+            
+                stop = start + batchsize
+            
+                # Add your own code here
+                grad_v =  2/batchsize * np.matmul(full_matrix[start:stop, XTrain.shape[1]: XTrain.shape[1] + Wout.shape[1]].transpose(), full_matrix[start:stop,-estm.shape[1]:])
+            
+                grad_w = 2/batchsize * np.matmul(full_matrix[start:stop, :XTrain.shape[1]].transpose(), (np.multiply(np.matmul(full_matrix[start:stop,-estm.shape[1]:], Vout.transpose()), (1-full_matrix[start:stop,XTrain.shape[1]:XTrain.shape[1] + Wout.shape[1]]**2))))
 
-        # Take a learning step
-        Vout = Vout - learningRate * grad_v
-        Wout = Wout - learningRate * grad_w
+                # Take a learning step
+                Vout = Vout - learningRate * grad_v
+                Wout = Wout - learningRate * grad_w
 
-        # Evaluate errors
-    #     YTrain = runMultiLayer(XTrain, Wout, Vout);
-        YTrain, LTrain, HTrain = runMultiLayer(XTrain, Wout, Vout)
-        YTest, LTest , HTest  = runMultiLayer(XTest , Wout, Vout)
-        ErrTrain[1+n] = ((YTrain - DTrain)**2).sum() / (NTrain * NClasses)
-        ErrTest[1+n]  = ((YTest  - DTest )**2).sum() / (NTest * NClasses)
+                # Evaluate errors
+                #     YTrain = runMultiLayer(XTrain, Wout, Vout);
+                YTrain, LTrain, HTrain = runMultiLayer(XTrain, Wout, Vout)
+                YTest, LTest , HTest  = runMultiLayer(XTest , Wout, Vout)
+                ErrTrain[1+n] = ((YTrain - DTrain)**2).sum() / (NTrain * NClasses)
+                ErrTest[1+n]  = ((YTest  - DTest )**2).sum() / (NTest * NClasses)
 
     return Wout, Vout, ErrTrain, ErrTest
