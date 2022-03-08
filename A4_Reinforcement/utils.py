@@ -1,6 +1,7 @@
 
 import numpy as np
 from matplotlib import pyplot as plt
+from mpl_toolkits import mplot3d
 
 
 def getpolicy(Q):
@@ -11,7 +12,8 @@ def getpolicy(Q):
     operations. It's possible to implement this in one line of code.
     """
 
-    P = np.amax(Q, axis = 2)
+    #P = np.amax(Q, axis = 2)
+    P = np.argmax(Q, axis = 2) 
 
     return P
 
@@ -24,7 +26,7 @@ def getvalue(Q):
     operations. It's possible to implement this in one line of code.
     """
     
-    V = np.amax(Q, axis = 2)
+    V = np.max(Q)
 
     return V
 
