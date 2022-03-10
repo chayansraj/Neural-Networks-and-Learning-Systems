@@ -95,4 +95,4 @@ class World:
             
         display.display(pl.gcf())
         display.clear_output(wait=True)
-        time.sleep(sleepTime)
+        #time.sleep(sleepTime)
